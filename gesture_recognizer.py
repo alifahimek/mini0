@@ -115,7 +115,8 @@ class SwipeRecognizer:
                 if dx >= min_disp:
                     velocity_x = dx / dt
                     if velocity_x >= min_vel and dx >= (horiz_ratio * dy):
-                        if self._is_monotonic(p_start, p_now, history, direction):
+                        if self._is_fist_closed_enough(p_start, p_now, history) and \
+                           self._is_monotonic(p_start, p_now, history, direction):
                             return True
 
         # Strategy 2: Extrema pair in sliding window
@@ -134,10 +135,35 @@ class SwipeRecognizer:
                 if dx >= min_disp:
                     velocity_x = dx / dt
                     if velocity_x >= min_vel and dx >= (horiz_ratio * dy):
-                        if self._is_monotonic(start_cand, end_cand, history, direction):
+                        if self._is_fist_closed_enough(start_cand, end_cand, history) and \
+                           self._is_monotonic(start_cand, end_cand, history, direction):
                             return True
 
         return False
+
+    def _is_fist_closed_enough(
+        self,
+        p_start: MotionPoint,
+        p_end: MotionPoint,
+        history: List[MotionPoint]
+    ) -> bool:
+        """
+        If require_closed_fist is enabled, strictly verifies that the hand
+        is in a closed fist posture during the swipe gesture.
+        """
+        if not getattr(self.config, "require_closed_fist", True):
+            return True
+
+        sub = [p for p in history if p_start.timestamp <= p.timestamp <= p_end.timestamp]
+        if not sub:
+            return False
+
+        # Verify that the hand is a closed fist (at latest point or majority of stroke)
+        latest_is_fist = getattr(sub[-1], "is_fist_closed", False)
+        fist_count = sum(1 for p in sub if getattr(p, "is_fist_closed", False))
+        fist_ratio = fist_count / float(len(sub))
+
+        return latest_is_fist or (fist_ratio >= 0.50)
 
     def _is_monotonic(
         self,

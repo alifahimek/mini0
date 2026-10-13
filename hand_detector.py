@@ -73,6 +73,10 @@ class HandLandmarkData:
     # Raw wrist pixel coordinates
     wrist_px: Tuple[int, int]
 
+    # Closed fist detection flag and confidence score
+    is_fist_closed: bool = False
+    fist_confidence: float = 0.0
+
 
 class HandDetector:
     """
@@ -255,6 +259,11 @@ class HandDetector:
         if hand_span < 1.0:
             hand_span = 1.0
 
+        # 5. Closed Fist Pose Classification
+        is_fist_closed, fist_confidence = self._check_closed_fist(
+            landmarks_px, landmarks_norm, hand_span
+        )
+
         return HandLandmarkData(
             landmarks_norm=landmarks_norm,
             landmarks_px=landmarks_px,
@@ -264,8 +273,65 @@ class HandDetector:
             all_landmarks_centroid_px=all_centroid_px,
             bbox_px=bbox_px,
             hand_span_px=hand_span,
-            wrist_px=landmarks_px[0]
+            wrist_px=landmarks_px[0],
+            is_fist_closed=is_fist_closed,
+            fist_confidence=fist_confidence
         )
+
+    def _check_closed_fist(
+        self,
+        landmarks_px: List[Tuple[int, int]],
+        landmarks_norm: List[Tuple[float, float, float]],
+        hand_span: float,
+        curl_threshold: float = 0.58
+    ) -> Tuple[bool, float]:
+        """
+        Determines if the hand is in a closed fist posture across all viewing angles.
+        A closed fist requires:
+        1. Index (8 to 5), Middle (12 to 9), Ring (16 to 13), Pinky (20 to 17) are curled inward.
+        2. At least 3 of the 4 fingers must be curled, with both Index and Middle knuckles curled.
+        3. Returns (is_fist_closed, confidence_score [0.0 - 1.0]).
+        """
+        fingers = [(8, 5), (12, 9), (16, 13), (20, 17)]
+        curls = []
+
+        for tip, mcp in fingers:
+            p_tip = landmarks_px[tip]
+            p_mcp = landmarks_px[mcp]
+            ratio_2d = math.hypot(p_tip[0] - p_mcp[0], p_tip[1] - p_mcp[1]) / (hand_span + 1e-6)
+
+            if landmarks_norm:
+                n_tip = landmarks_norm[tip]
+                n_mcp = landmarks_norm[mcp]
+                w0_norm = landmarks_norm[0]
+                m9_norm = landmarks_norm[9]
+                span_3d = math.sqrt(
+                    (m9_norm[0] - w0_norm[0]) ** 2 +
+                    (m9_norm[1] - w0_norm[1]) ** 2 +
+                    (m9_norm[2] - w0_norm[2]) ** 2
+                )
+                dist_3d = math.sqrt(
+                    (n_tip[0] - n_mcp[0]) ** 2 +
+                    (n_tip[1] - n_mcp[1]) ** 2 +
+                    (n_tip[2] - n_mcp[2]) ** 2
+                )
+                ratio_3d = dist_3d / (span_3d + 1e-6)
+                effective_ratio = min(ratio_2d, ratio_3d)
+            else:
+                effective_ratio = ratio_2d
+
+            curls.append(effective_ratio)
+
+        curled_count = sum(1 for r in curls if r < curl_threshold)
+        index_curled = curls[0] < curl_threshold
+        middle_curled = curls[1] < curl_threshold
+
+        is_closed = (curled_count >= 3) and index_curled and middle_curled
+
+        avg_curl = sum(curls) / len(curls)
+        confidence = max(0.0, min(1.0, 1.0 - (avg_curl - 0.25) / 0.35))
+
+        return is_closed, confidence
 
     def close(self):
         """Release MediaPipe resources cleanly."""

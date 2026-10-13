@@ -51,6 +51,13 @@ class MotionConfig:
     # Grace frames to bridge momentary tracking dropouts during fast swings
     lost_frames_grace: int = 2
 
+    # Closed Fist Requirement:
+    # Only allow slide transitions when the hand is shaped into a closed fist!
+    require_closed_fist: bool = True
+
+    # Finger curl ratio threshold for closed fist classification
+    fist_curl_threshold: float = 0.58
+
 
 @dataclass
 class KeyConfig:
@@ -73,6 +80,8 @@ class VisualConfig:
     # Status indicator colors
     COLOR_NO_HAND: Tuple[int, int, int] = (70, 70, 180)        # Muted red
     COLOR_HAND_DETECTED: Tuple[int, int, int] = (180, 180, 60)  # Muted cyan
+    COLOR_FIST_CLOSED: Tuple[int, int, int] = (0, 255, 128)     # Vibrant neon green
+    COLOR_FIST_OPEN: Tuple[int, int, int] = (120, 120, 180)     # Muted amber/red for open/locked hand
     COLOR_TRACKING: Tuple[int, int, int] = (80, 200, 80)        # Vibrant green
     COLOR_MOVING_RIGHT: Tuple[int, int, int] = (255, 180, 40)   # Bright Cyan/Sky
     COLOR_MOVING_LEFT: Tuple[int, int, int] = (40, 180, 255)    # Amber/Orange

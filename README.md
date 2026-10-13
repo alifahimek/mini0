@@ -1,29 +1,28 @@
-# Hand-Gesture-Controlled PowerPoint Presentation System
+# Hand-Gesture-Controlled PowerPoint Presentation System (Closed-Fist Signal)
 
 A Python-based, real-time presentation controller powered by **OpenCV**, **MediaPipe Hands**, and **PyAutoGUI**.
 
-Control slide decks in **Microsoft PowerPoint**, **Google Slides**, **PDF Presenters**, or **Keynote** simply by swiping your hand in the air.
+Control slide decks in **Microsoft PowerPoint**, **Google Slides**, **PDF Presenters**, or **Keynote** using **Closed-Fist Swipes**.
 
 ---
 
-## 🌟 Key Design Principle: Whole-Hand Input (Pose-Agnostic)
+## ✊ Hand Signal: Closed Fist Requirement (Presenter Clutch)
 
-Most gesture systems require a specific finger posture (e.g. open palm with 5 fingers extended, or pointing index finger). This system is designed around the principle:
+To eliminate false triggers when speaking and gesturing with open hands:
 
-> **"Gesture = Movement of the entire hand, not a specific finger configuration."**
+> **"Slide changes ONLY occur when the hand is formed into a CLOSED FIST."**
 
-### Why Whole-Hand Tracking is Superior:
-- **No Specific Finger Pose Required:** Works whether your hand is open, relaxed, loosely held, or in a fist.
-- **Rotation & Angle Invariant:**
-  - Palm facing the camera
-  - Back of hand facing the camera
-  - Hand rotated left or right
-  - Hand tilted upward or downward
-  - Hand viewed diagonally or partially sideways
-  - Natural presenter wrist rotations
-- **Rigid Anatomical Core:** Rather than tracking a jittery fingertip, this system calculates the hand center using the **rigid carpal and metacarpal base**:
-  $$\text{Palm Center} = \frac{1}{6} \left( P_{\text{wrist}} + P_{\text{thumb\_cmc}} + P_{\text{index\_mcp}} + P_{\text{middle\_mcp}} + P_{\text{ring\_mcp}} + P_{\text{pinky\_mcp}} \right)$$
-  When you curl your fingers, the palm center remains rock-solid.
+### How It Works:
+- **Safety Lock (Open Hand):** Gesturing, talking with hands, or pointing with open fingers is **ignored**. Swipes will NOT trigger slide changes.
+- **Presenter Clutch (Closed Fist):** Curl your fingers into a closed fist to unlock slide controls:
+  - **Closed Fist Swipe RIGHT** $\rightarrow$ **Next Slide** (`'right'` arrow key)
+  - **Closed Fist Swipe LEFT** $\rightarrow$ **Previous Slide** (`'left'` arrow key)
+- **Robust Across All Fist Orientations:**
+  - Fist with palm facing camera
+  - Fist with back of hand facing camera (knuckles forward)
+  - Fist rotated sideways or tilted diagonally
+  - Different wrist and hand angles
+- **Toggle Anytime:** Press **`F`** in the camera window or pass `--no-fist-lock` to allow swiping with any hand pose.
 
 ---
 
@@ -116,6 +115,7 @@ To test gestures without opening Microsoft PowerPoint:
 |:---:|:---|
 | **`Q`** or **`ESC`** | Quit application cleanly |
 | **`C`** | Toggle PowerPoint key emission (**ACTIVE** vs **MUTED**) |
+| **`F`** | Toggle Closed Fist lock requirement (**REQUIRED** vs **ANY POSE**) |
 | **`M`** | Toggle camera mirroring (Natural mirror mode ON/OFF) |
 | **`R`** | Reset trajectory buffer and cooldown timer |
 | **`H`** | Toggle hand landmarks / skeleton visibility |
@@ -136,8 +136,9 @@ python main.py --help
 | `--width` | `640` | Video frame width in pixels |
 | `--height` | `480` | Video frame height in pixels |
 | `--no-mirror` | `False` | Disable horizontal video mirroring |
+| `--no-fist-lock` | `False` | Disable closed-fist requirement (allows any hand pose) |
 | `--mute` | `False` | Start with PyAutoGUI key emissions disabled (testing mode) |
-| `--cooldown` | `1.2` | Debounce duration between slides in seconds |
+| `--cooldown` | `0.9` | Debounce duration between slides in seconds |
 | `--model-path` | `None` | Custom path to `hand_landmarker.task` |
 
 Example:

@@ -22,6 +22,8 @@ class MotionPoint:
     norm_x: float       # Normalized x (0.0 to 1.0)
     norm_y: float       # Normalized y (0.0 to 1.0)
     hand_span: float    # Hand scale in pixels
+    is_fist_closed: bool = False
+    fist_confidence: float = 0.0
 
 
 class MotionTracker:
@@ -44,6 +46,8 @@ class MotionTracker:
         # Real-time motion status
         self.is_tracking: bool = False
         self.lost_frames: int = 0
+        self.current_is_fist_closed: bool = False
+        self.current_fist_confidence: float = 0.0
         self.current_velocity_x_norm: float = 0.0  # Normalized widths / sec
         self.current_velocity_y_norm: float = 0.0
         self.current_velocity_x_px: float = 0.0    # Pixels / sec
@@ -84,6 +88,8 @@ class MotionTracker:
 
         # Hand is detected: reset lost frames
         self.lost_frames = 0
+        self.current_is_fist_closed = hand_data.is_fist_closed
+        self.current_fist_confidence = hand_data.fist_confidence
         raw_x_px, raw_y_px = hand_data.palm_center_px
         raw_x_norm, raw_y_norm = hand_data.palm_center_norm
         alpha = self.config.ema_alpha
@@ -106,7 +112,9 @@ class MotionTracker:
             y=self._smooth_y,
             norm_x=self._smooth_norm_x,
             norm_y=self._smooth_norm_y,
-            hand_span=hand_data.hand_span_px
+            hand_span=hand_data.hand_span_px,
+            is_fist_closed=hand_data.is_fist_closed,
+            fist_confidence=hand_data.fist_confidence
         )
         self.history.append(point)
         self.is_tracking = True

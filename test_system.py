@@ -102,7 +102,9 @@ def generate_synthetic_hand_landmarks(
         all_landmarks_centroid_px=(sum(xs)/21.0, sum(ys)/21.0),
         bbox_px=(min(xs), min(ys), max(xs), max(ys)),
         hand_span_px=scale,
-        wrist_px=landmarks_px[0]
+        wrist_px=landmarks_px[0],
+        is_fist_closed=fingers_curled,
+        fist_confidence=1.0 if fingers_curled else 0.0
     )
 
 
@@ -149,7 +151,7 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
             self.assertLess(dist, 50.0, f"Palm center at {angle_deg} deg should remain near core")
 
     def test_right_swipe_detection(self):
-        """A clean left-to-right swipe should be detected as RIGHT_SWIPE."""
+        """A clean left-to-right swipe with closed fist should be detected as RIGHT_SWIPE."""
         start_time = 100.0
         history = []
         # Move from norm_x = 0.25 to norm_x = 0.65 over 0.25 seconds (displacement = 0.40)
@@ -161,13 +163,13 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
             norm_y = 0.50 + 0.01 * (progress - 0.5)  # Tiny vertical drift
             px_x = norm_x * 640
             px_y = norm_y * 480
-            history.append(MotionPoint(t, px_x, px_y, norm_x, norm_y, 80.0))
+            history.append(MotionPoint(t, px_x, px_y, norm_x, norm_y, 80.0, is_fist_closed=True))
 
         gesture = self.recognizer.process(history, current_time=start_time + 0.25)
         self.assertEqual(gesture, Gesture.RIGHT_SWIPE, "Should detect RIGHT_SWIPE")
 
     def test_left_swipe_detection(self):
-        """A clean right-to-left swipe should be detected as LEFT_SWIPE."""
+        """A clean right-to-left swipe with closed fist should be detected as LEFT_SWIPE."""
         start_time = 100.0
         history = []
         # Move from norm_x = 0.70 to norm_x = 0.30 over 0.25 seconds (displacement = -0.40)
@@ -179,13 +181,13 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
             norm_y = 0.50 + 0.01 * (progress - 0.5)
             px_x = norm_x * 640
             px_y = norm_y * 480
-            history.append(MotionPoint(t, px_x, px_y, norm_x, norm_y, 80.0))
+            history.append(MotionPoint(t, px_x, px_y, norm_x, norm_y, 80.0, is_fist_closed=True))
 
         gesture = self.recognizer.process(history, current_time=start_time + 0.25)
         self.assertEqual(gesture, Gesture.LEFT_SWIPE, "Should detect LEFT_SWIPE")
 
     def test_curved_left_swipe_detection(self):
-        """Natural curved inward left swipe with vertical dip must trigger LEFT_SWIPE."""
+        """Natural curved inward left swipe with closed fist must trigger LEFT_SWIPE."""
         start_time = 200.0
         history = []
         # Human left swipe: starts at x=0.62, y=0.45, ends at x=0.44, y=0.57 (dy = 0.12, dx = 0.18)
@@ -194,7 +196,7 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
             prog = i / 7.0
             norm_x = 0.62 - (0.18 * prog)
             norm_y = 0.45 + (0.12 * prog)
-            history.append(MotionPoint(t, norm_x * 640, norm_y * 480, norm_x, norm_y, 80.0))
+            history.append(MotionPoint(t, norm_x * 640, norm_y * 480, norm_x, norm_y, 80.0, is_fist_closed=True))
 
         gesture = self.recognizer.process(history, current_time=start_time + 0.175)
         self.assertEqual(gesture, Gesture.LEFT_SWIPE, "Curved natural left swipe must trigger LEFT_SWIPE")
@@ -251,7 +253,7 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
         for i in range(10):
             t = 10.0 + (i * 0.02)
             norm_x = 0.20 + 0.35 * (i / 9.0)
-            history1.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0))
+            history1.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0, is_fist_closed=True))
 
         gesture1 = self.recognizer.process(history1, current_time=10.20)
         self.assertEqual(gesture1, Gesture.RIGHT_SWIPE)
@@ -262,7 +264,7 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
         for i in range(10):
             t = 10.40 + (i * 0.02)
             norm_x = 0.20 + 0.35 * (i / 9.0)
-            history2.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0))
+            history2.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0, is_fist_closed=True))
 
         gesture2 = self.recognizer.process(history2, current_time=10.60)
         self.assertEqual(gesture2, Gesture.NONE, "Swipe within cooldown must be suppressed")
@@ -272,10 +274,73 @@ class TestWholeHandPresentationSystem(unittest.TestCase):
         for i in range(10):
             t = 11.50 + (i * 0.02)
             norm_x = 0.20 + 0.35 * (i / 9.0)
-            history3.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0))
+            history3.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.5, 80.0, is_fist_closed=True))
 
         gesture3 = self.recognizer.process(history3, current_time=11.70)
         self.assertEqual(gesture3, Gesture.RIGHT_SWIPE, "Swipe after cooldown must succeed")
+
+    def test_open_hand_swipe_rejected_when_fist_required(self):
+        """When require_closed_fist is True, a swipe made with an open hand must be REJECTED."""
+        self.assertTrue(self.recognizer.config.require_closed_fist)
+        start_time = 100.0
+        history = []
+        # Rapid horizontal swipe, but hand is OPEN (is_fist_closed=False)
+        for i in range(10):
+            t = start_time + (i * 0.025)
+            prog = i / 9.0
+            norm_x = 0.25 + (0.40 * prog)
+            history.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.50, 80.0, is_fist_closed=False, fist_confidence=0.0))
+
+        gesture = self.recognizer.process(history, current_time=start_time + 0.25)
+        self.assertEqual(gesture, Gesture.NONE, "Open hand swipe must be rejected when fist is required")
+
+    def test_closed_fist_swipe_accepted_when_fist_required(self):
+        """When require_closed_fist is True, a swipe made with a CLOSED FIST must be ACCEPTED."""
+        self.assertTrue(self.recognizer.config.require_closed_fist)
+        start_time = 100.0
+        history = []
+        for i in range(10):
+            t = start_time + (i * 0.025)
+            prog = i / 9.0
+            norm_x = 0.25 + (0.40 * prog)
+            history.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.50, 80.0, is_fist_closed=True, fist_confidence=1.0))
+
+        gesture = self.recognizer.process(history, current_time=start_time + 0.25)
+        self.assertEqual(gesture, Gesture.RIGHT_SWIPE, "Closed fist swipe must be accepted when fist is required")
+
+    def test_fist_lock_toggle(self):
+        """Disabling require_closed_fist allows open-hand swipes to register again."""
+        self.recognizer.config.require_closed_fist = False
+        start_time = 100.0
+        history = []
+        for i in range(10):
+            t = start_time + (i * 0.025)
+            prog = i / 9.0
+            norm_x = 0.25 + (0.40 * prog)
+            history.append(MotionPoint(t, norm_x * 640, 240, norm_x, 0.50, 80.0, is_fist_closed=False, fist_confidence=0.0))
+
+        gesture = self.recognizer.process(history, current_time=start_time + 0.25)
+        self.assertEqual(gesture, Gesture.RIGHT_SWIPE, "Open-hand swipe should be accepted when require_closed_fist is False")
+        self.recognizer.config.require_closed_fist = True  # restore
+
+    def test_closed_fist_classification_detector(self):
+        """HandDetector correctly differentiates between open hand and closed fist."""
+        detector = HandDetector()
+        open_h = generate_synthetic_hand_landmarks(320, 240, fingers_curled=False)
+        fist_h = generate_synthetic_hand_landmarks(320, 240, fingers_curled=True)
+
+        is_fist_open, conf_open = detector._check_closed_fist(
+            open_h.landmarks_px, open_h.landmarks_norm, open_h.hand_span_px
+        )
+        is_fist_closed, conf_closed = detector._check_closed_fist(
+            fist_h.landmarks_px, fist_h.landmarks_norm, fist_h.hand_span_px
+        )
+
+        self.assertFalse(is_fist_open, "Open hand should not be classified as fist")
+        self.assertTrue(is_fist_closed, "Curled hand should be classified as fist")
+        self.assertGreater(conf_closed, 0.70)
+        self.assertLess(conf_open, 0.30)
+        detector.close()
 
     def test_presentation_controller_dispatch(self):
         """PresentationController correctly triggers actions and tracks counts."""

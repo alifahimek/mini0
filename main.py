@@ -60,6 +60,11 @@ def parse_args() -> argparse.Namespace:
         help="Swipe cooldown/debounce duration in seconds (default: 1.2)"
     )
     parser.add_argument(
+        "--no-fist-lock",
+        action="store_true",
+        help="Allow swiping with any hand pose instead of requiring a closed fist"
+    )
+    parser.add_argument(
         "--model-path",
         type=str,
         default=None,
@@ -78,22 +83,26 @@ def run_app():
     cfg.camera.frame_height = args.height
     cfg.camera.mirror_feed = not args.no_mirror
     cfg.motion.cooldown_seconds = args.cooldown
+    if args.no_fist_lock:
+        cfg.motion.require_closed_fist = False
     if args.mute:
         cfg.key.enable_key_emission = False
 
     print("=" * 65)
     print("   HAND-GESTURE POWERPOINT PRESENTATION SYSTEM")
-    print("   Whole-Hand / Pose-Agnostic Gesture Controller")
+    print("   Closed-Fist Gesture Controller")
     print("=" * 65)
     print(f"[Config] Camera Index   : {cfg.camera.device_index}")
     print(f"[Config] Resolution     : {cfg.camera.frame_width}x{cfg.camera.frame_height}")
     print(f"[Config] Mirror Feed    : {cfg.camera.mirror_feed}")
     print(f"[Config] Swipe Cooldown : {cfg.motion.cooldown_seconds}s")
+    print(f"[Config] Fist Lock      : {'REQUIRED (Closed Fist Only)' if cfg.motion.require_closed_fist else 'DISABLED (Any Pose)'}")
     print(f"[Config] Key Control    : {'ENABLED (PyAutoGUI active)' if cfg.key.enable_key_emission else 'MUTED (Testing)'}")
     print("-" * 65)
     print("Interactive Controls:")
     print("  [Q] or [ESC] : Quit application")
     print("  [C]          : Toggle PowerPoint keypresses (Active / Muted)")
+    print("  [F]          : Toggle Closed Fist requirement (Required / Any)")
     print("  [M]          : Toggle camera mirroring")
     print("  [R]          : Reset motion tracking buffer")
     print("  [H]          : Toggle hand landmarks skeleton visibility")
@@ -198,6 +207,10 @@ def run_app():
                 break
             elif key in (ord('c'), ord('C')):
                 presentation_controller.toggle_enabled()
+            elif key in (ord('f'), ord('F')):
+                cfg.motion.require_closed_fist = not cfg.motion.require_closed_fist
+                state = "REQUIRED (Closed Fist Only)" if cfg.motion.require_closed_fist else "DISABLED (Any Hand Pose)"
+                print(f"[Setting] Closed fist requirement is now: {state}")
             elif key in (ord('m'), ord('M')):
                 cfg.camera.mirror_feed = not cfg.camera.mirror_feed
                 print(f"[Setting] Camera mirror: {'ENABLED' if cfg.camera.mirror_feed else 'DISABLED'}")

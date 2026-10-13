@@ -11,53 +11,53 @@ from typing import List, Tuple
 
 SLIDES_DATA = [
     {
-        "title": "Whole-Hand Gesture Presentation System",
-        "subtitle": "Computer Vision & Motion-Based PowerPoint Navigation",
+        "title": "Closed-Fist Gesture Presentation Controller",
+        "subtitle": "Controlled using natural Closed-Fist Swipes (MediaPipe + OpenCV + PyAutoGUI)",
         "bullet_points": [
-            "Controlled using natural hand swipes (MediaPipe + OpenCV + PyAutoGUI)",
-            "Pose-Agnostic: Works with any finger pose (open palm, fist, relaxed, loose fingers)",
-            "Rotation-Agnostic: Palm-facing, back-facing, tilted, or sideways",
-            "Try it now: Swipe your hand to the RIGHT to move to Slide 2!"
+            "Hand Signal: Form a CLOSED FIST to activate slide navigation.",
+            "Safety Lock: Open hands while speaking are ignored to prevent accidental slide changes.",
+            "Form a CLOSED FIST and swipe RIGHT to move to Slide 2!",
+            "Form a CLOSED FIST and swipe LEFT to move back to previous slides."
         ],
         "color_accent": "#00ADB5",
-        "footer": "Slide 1 of 5  |  Waiting for Right Swipe (Next Slide)..."
+        "footer": "Slide 1 of 5  |  Waiting for Closed-Fist Right Swipe (Next Slide)..."
     },
     {
-        "title": "Design Principle: Entire Hand Input",
-        "subtitle": "No finger-counting, no pinch gestures, no static pose classifications",
+        "title": "Design Principle: Closed Fist Clutch",
+        "subtitle": "Only triggers when your hand is curled into a closed fist",
         "bullet_points": [
-            "Single fingertips jitter when fingers curl or rotate.",
-            "This system tracks the rigid anatomical base: Wrist (0) + MCP Knuckles (1, 5, 9, 13, 17).",
-            "Stable whole-hand center remains consistent regardless of orientation.",
-            "Swipe RIGHT for Next Slide  |  Swipe LEFT for Previous Slide"
+            "Natural Presenter Safety: Talk with your hands open without triggering slides.",
+            "Clutch Mechanism: Curl fingers into a fist when you are ready to change slides.",
+            "Rigid Core Tracking: Tracks the anatomical palm base for jitter-free motion.",
+            "Closed Fist Swipe RIGHT -> Next Slide  |  Closed Fist Swipe LEFT -> Prev Slide"
         ],
         "color_accent": "#FF5722",
-        "footer": "Slide 2 of 5  |  Use Left/Right swipes to navigate"
+        "footer": "Slide 2 of 5  |  Use Closed-Fist Left/Right swipes to navigate"
     },
     {
         "title": "Robust Across All Hand Orientations",
-        "subtitle": "Tested across diverse angles and natural presenter movements",
+        "subtitle": "Fist detection works from any presentation angle",
         "bullet_points": [
-            "[✓] Palm facing the webcam",
-            "[✓] Back of the hand facing the webcam",
-            "[✓] Hand rotated 90 degrees or tilted diagonally",
-            "[✓] Hand partially turned sideways",
-            "[✓] Different wrist angles and distances from laptop"
+            "[✓] Fist with palm facing camera",
+            "[✓] Fist with back of the hand facing camera (knuckles forward)",
+            "[✓] Fist rotated sideways or tilted diagonally",
+            "[✓] Upward or downward hand tilts",
+            "[✓] Different distances and camera angles"
         ],
         "color_accent": "#4CAF50",
-        "footer": "Slide 3 of 5  |  Swipe Right to continue"
+        "footer": "Slide 3 of 5  |  Swipe Right with closed fist to continue"
     },
     {
         "title": "Intelligent Motion & Debounce Pipeline",
         "subtitle": "Eliminating false positives and accidental slide changes",
         "bullet_points": [
+            "Closed Fist Gate: Only changes slides if the fist is closed.",
             "Horizontal Dominance Check: Rejects vertical waving, scratching, or nodding.",
-            "Velocity & Distance Threshold: Rejects slow hand repositioning and fidgets.",
-            "Debounce Cooldown (1.2s): Guarantees one physical swipe changes exactly one slide.",
+            "Debounce Cooldown (0.9s): Guarantees one physical swipe changes exactly one slide.",
             "Buffer Flush: Return strokes never trigger accidental reverse slides."
         ],
         "color_accent": "#E91E63",
-        "footer": "Slide 4 of 5  |  Swipe Right to continue"
+        "footer": "Slide 4 of 5  |  Swipe Right with closed fist to continue"
     },
     {
         "title": "Ready for Microsoft PowerPoint & Beyond",

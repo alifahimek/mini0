@@ -45,11 +45,11 @@ class UIRenderer:
         self.banner_until = now + self.visual.swipe_banner_duration
 
         if gesture == Gesture.RIGHT_SWIPE:
-            self.banner_text = "RIGHT SWIPE -> NEXT SLIDE"
+            self.banner_text = "CLOSED FIST RIGHT SWIPE -> NEXT SLIDE"
             self.banner_subtext = ">> Key [RIGHT] Dispatched >>"
             self.banner_color = (0, 230, 255)  # Bright Gold / Yellow
         elif gesture == Gesture.LEFT_SWIPE:
-            self.banner_text = "LEFT SWIPE -> PREVIOUS SLIDE"
+            self.banner_text = "CLOSED FIST LEFT SWIPE -> PREV SLIDE"
             self.banner_subtext = "<< Key [LEFT] Dispatched <<"
             self.banner_color = (255, 140, 0)  # Bright Orange / Blue in BGR
 
@@ -128,13 +128,26 @@ class UIRenderer:
         )
 
     def _draw_palm_center(self, frame: np.ndarray, hand_data: HandLandmarkData):
-        """Draws prominent whole-hand palm center marker."""
+        """Draws prominent whole-hand palm center marker with fist status."""
         cx = int(round(hand_data.palm_center_px[0]))
         cy = int(round(hand_data.palm_center_px[1]))
-        color = self.visual.COLOR_PALM_CENTER
+
+        fist_required = getattr(self.config.motion, "require_closed_fist", True)
+        is_closed = hand_data.is_fist_closed
+
+        if is_closed:
+            color = self.visual.COLOR_FIST_CLOSED
+            label = "CLOSED FIST [ACTIVE]"
+            radius = 15
+            thickness = 2
+        else:
+            color = self.visual.COLOR_FIST_OPEN if fist_required else (200, 200, 80)
+            label = "Open Hand (Locked)" if fist_required else "Hand Center"
+            radius = 12
+            thickness = 1
 
         # Outer ring
-        cv2.circle(frame, (cx, cy), 12, color, 2, cv2.LINE_AA)
+        cv2.circle(frame, (cx, cy), radius, color, thickness, cv2.LINE_AA)
         # Inner dot
         cv2.circle(frame, (cx, cy), 4, (255, 255, 255), -1, cv2.LINE_AA)
         # Crosshair
@@ -144,7 +157,7 @@ class UIRenderer:
         # Label
         cv2.putText(
             frame,
-            "Hand Center",
+            label,
             (cx + 14, cy + 4),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.4,
@@ -215,14 +228,26 @@ class UIRenderer:
             cv2.LINE_AA
         )
 
-        # Hand architecture note
+        # Closed Fist Status indicator
+        fist_required = getattr(self.config.motion, "require_closed_fist", True)
+        if hand_data is not None:
+            if hand_data.is_fist_closed:
+                mode_text = "Fist: CLOSED [Swipes Active]"
+                mode_color = self.visual.COLOR_FIST_CLOSED
+            else:
+                mode_text = "Fist: OPEN [Swipes Locked]" if fist_required else "Pose: Any Hand Pose"
+                mode_color = self.visual.COLOR_FIST_OPEN if fist_required else self.visual.COLOR_TEXT_DIM
+        else:
+            mode_text = "Mode: Closed-Fist Required" if fist_required else "Mode: Any Pose"
+            mode_color = self.visual.COLOR_TEXT_DIM
+
         cv2.putText(
             frame,
-            "Mode: Whole-Hand / Pose-Agnostic",
+            mode_text,
             (32, 46),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.38,
-            self.visual.COLOR_TEXT_DIM,
+            mode_color,
             1,
             cv2.LINE_AA
         )
@@ -343,7 +368,7 @@ class UIRenderer:
         cv2.line(overlay, (0, h - footer_height), (w, h - footer_height), (40, 40, 45), 1)
         cv2.addWeighted(overlay, 0.85, frame, 0.15, 0, frame)
 
-        hint_text = "[Q] Quit  |  [C] Toggle PPT Control  |  [M] Toggle Mirror  |  [R] Reset Trajectory  |  [H] Toggle Skeleton"
+        hint_text = "[Q] Quit  |  [C] PPT Control  |  [F] Toggle Fist Lock  |  [M] Mirror  |  [R] Reset  |  [H] Skeleton"
         cv2.putText(
             frame,
             hint_text,
